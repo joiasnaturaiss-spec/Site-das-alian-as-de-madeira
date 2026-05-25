@@ -1,0 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+@import "tailwindcss";
+
+:root {
+  --brand-lime: #bef264;
+  --brand-green: #65a30d;
+  --brand-lime-rgb: 190, 242, 100;
+  --brand-green-rgb: 101, 163, 13;
+}
+
+.theme-gold {
+  --brand-lime: #cea14a;
+  --brand-green: #906e2f;
+  --brand-lime-rgb: 206, 161, 74;
+  --brand-green-rgb: 144, 110, 47;
+}
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", ui-serif, Georgia, Cambria, serif;
+  
+  --color-brand-lime: var(--brand-lime);
+  --color-brand-green: var(--brand-green);
+}
+
+@layer base {
+  body {
+    @apply bg-black text-white font-sans antialiased overflow-x-hidden select-none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+}
+
+@layer utilities {
+  .glow-green {
+    box-shadow: 0 0 15px rgba(var(--brand-lime-rgb), 0.4);
+  }
+  .glow-green-strong {
+    box-shadow: 0 0 25px rgba(var(--brand-lime-rgb), 0.6);
+  }
+  .text-glow {
+    text-shadow: 0 0 10px rgba(var(--brand-lime-rgb), 0.5);
+  }
+  .border-glow {
+    border-color: rgba(var(--brand-lime-rgb), 0.5);
+    box-shadow: inset 0 0 10px rgba(var(--brand-lime-rgb), 0.2), 0 0 15px rgba(var(--brand-lime-rgb), 0.2);
+  }
+}
+
+/* Hide scrollbar but keep functionality */
+::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}

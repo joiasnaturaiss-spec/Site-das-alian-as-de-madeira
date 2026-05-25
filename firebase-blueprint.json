@@ -1,0 +1,125 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with role details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email", "name", "role", "createdAt"]
+    },
+    "Chat": {
+      "title": "Chat",
+      "description": "Chat thread between a user and admins",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "lastMessage": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "unreadByAdmin": { "type": "boolean" },
+        "unreadByUser": { "type": "boolean" }
+      },
+      "required": ["id", "userId", "userName", "userEmail", "lastMessage", "updatedAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "A message in a chat thread",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderRole": { "type": "string", "enum": ["user", "admin"] },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "senderId", "senderName", "senderRole", "text", "createdAt"]
+    },
+    "Evaluation": {
+      "title": "Evaluation",
+      "description": "Customer evaluation and review",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "clientName": { "type": "string" },
+        "rating": { "type": "integer" },
+        "comment": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "avatarColor": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "clientName", "rating", "comment", "createdAt", "status"]
+    },
+    "Cart": {
+      "title": "Cart",
+      "description": "User shopping cart containing selected items",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "email": { "type": "string" },
+        "items": { "type": "array" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "email", "items", "updatedAt"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Client secure order purchase with anti-fraud tracking",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "clientName": { "type": "string" },
+        "clientEmail": { "type": "string" },
+        "clientPhone": { "type": "string" },
+        "date": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pago", "Pendente", "Cancelado", "Em Produção", "Enviado", "Entregue"] },
+        "value": { "type": "number" },
+        "ringSpecs": { "type": "object" },
+        "rings": { "type": "array" },
+        "address": { "type": "string" },
+        "trackingCode": { "type": "string" },
+        "cpf": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "securityScore": { "type": "string" },
+        "fingerprint": { "type": "string" }
+      },
+      "required": ["id", "clientName", "clientEmail", "date", "status", "value", "address", "cpf"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Collection of user profiles"
+    },
+    "carts/{userId}": {
+      "schema": "Cart",
+      "description": "User shopping cart synchronizer for multi-device cross-talk"
+    },
+    "orders/{orderId}": {
+      "schema": "Order",
+      "description": "Secure customer orders synchronized with firestore"
+    },
+    "chats/{chatId}": {
+      "schema": "Chat",
+      "description": "Collection of active customer support chat threads"
+    },
+    "chats/{chatId}/messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Subcollection of messages inside a chat thread"
+    },
+    "evaluations/{evaluationId}": {
+      "schema": "Evaluation",
+      "description": "Reviews and evaluations submitted by users"
+    }
+  }
+}

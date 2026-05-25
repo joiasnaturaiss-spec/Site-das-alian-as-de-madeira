@@ -1,0 +1,8 @@
+{
+  "name": "Site 24/05",
+  "description": "A cinematic mobile-first web app for designing artisanal jewelry with a live visual editor and sophisticated dark aesthetic.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

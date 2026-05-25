@@ -1,0 +1,173 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helper Functions ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "joiasnaturaiss@gmail.com" ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin")
+      );
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Schema Validation Helpers ---
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'email', 'name', 'role', 'createdAt']) &&
+             data.keys().size() == 5 &&
+             data.id is string && data.id.size() <= 128 &&
+             data.email is string && data.email.size() <= 128 &&
+             data.name is string && data.name.size() <= 100 &&
+             data.role is string && (data.role == 'user' || data.role == 'admin') &&
+             (data.createdAt is string || data.createdAt is timestamp);
+    }
+
+    function isValidChat(data) {
+      return data.keys().hasAll(['id', 'userId', 'userName', 'userEmail', 'lastMessage', 'updatedAt']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.userName is string && data.userName.size() <= 100 &&
+             data.userEmail is string && data.userEmail.size() <= 128 &&
+             data.lastMessage is string && data.lastMessage.size() <= 2000 &&
+             (data.updatedAt is string || data.updatedAt is timestamp);
+    }
+
+    function isValidChatMessage(data) {
+      return data.keys().hasAll(['id', 'senderId', 'senderName', 'senderRole', 'text', 'createdAt']) &&
+             (data.keys().size() == 6 || (data.keys().size() == 7 && data.keys().hasAll(['imageUrl']) && data.imageUrl is string && data.imageUrl.size() <= 1000000)) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.senderId is string && data.senderId.size() <= 128 &&
+             data.senderName is string && data.senderName.size() <= 100 &&
+             data.senderRole is string && (data.senderRole == 'user' || data.senderRole == 'admin') &&
+             data.text is string && data.text.size() <= 2000 &&
+             (data.createdAt is string || data.createdAt is timestamp);
+    }
+
+    function isValidEvaluation(data) {
+      return data.keys().hasAll(['id', 'clientName', 'rating', 'comment', 'createdAt', 'status']) &&
+             data.id is string && data.id.size() <= 121 &&
+             data.clientName is string && data.clientName.size() <= 121 &&
+             data.rating is int && data.rating >= 1 && data.rating <= 5 &&
+             data.comment is string && data.comment.size() <= 2000 &&
+             data.status is string && (data.status == 'pending' || data.status == 'approved' || data.status == 'rejected');
+    }
+
+    function isValidCart(data) {
+      return data.keys().hasAll(['userId', 'email', 'items', 'updatedAt']) &&
+             data.keys().size() == 4 &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.email is string && data.email.size() <= 128 &&
+             data.items is list && data.items.size() <= 100 &&
+             (data.updatedAt is string || data.updatedAt is timestamp);
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll(['id', 'clientName', 'clientEmail', 'date', 'status', 'value', 'address', 'cpf']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.clientName is string && data.clientName.size() <= 150 &&
+             data.clientEmail is string && data.clientEmail.size() <= 150 &&
+             data.date is string && data.date.size() <= 100 &&
+             data.status is string && (
+               data.status == 'Pago' || 
+               data.status == 'Pendente' || 
+               data.status == 'Cancelado' ||
+               data.status == 'Em Produção' ||
+               data.status == 'Enviado' ||
+               data.status == 'Entregue'
+             ) &&
+             data.value is number &&
+             data.address is string && data.address.size() <= 1000 &&
+             data.cpf is string && data.cpf.size() <= 25;
+    }
+
+    // --- Collection Routes ---
+
+    match /orders/{orderId} {
+      allow get: if true; // Dynamic order status and invoice tracking
+      allow list: if isAdmin() || (isSignedIn() && resource.data.clientEmail == request.auth.token.email);
+      allow create: if isValidOrder(incoming());
+      allow update: if (isAdmin() && isValidOrder(incoming())) || (isSignedIn() && resource.data.clientEmail == request.auth.token.email && incoming().diff(existing()).affectedKeys().hasOnly(['address', 'clientPhone']) && isValidOrder(incoming()));
+      allow delete: if isAdmin();
+    }
+
+    match /carts/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow create, update: if (isOwner(userId) || isAdmin()) && isValidCart(incoming());
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      
+      allow create: if isOwner(userId) && isValidUser(incoming()) && (
+        incoming().role == 'user' || request.auth.token.email == "joiasnaturaiss@gmail.com"
+      );
+      
+      allow update: if (isOwner(userId) || isAdmin()) && isValidUser(incoming()) && (
+        // Safeguard Role Escalation unless admin
+        incoming().role == existing().role || isAdmin()
+      );
+      
+      allow delete: if isAdmin();
+    }
+
+    match /chats/{chatId} {
+      allow get, list: if isSignedIn() && (chatId == request.auth.uid || isAdmin());
+      
+      allow create: if isSignedIn() && isValidChat(incoming()) && (
+        chatId == request.auth.uid || isAdmin()
+      );
+      
+      allow update: if isSignedIn() && (chatId == request.auth.uid || isAdmin()) && isValidChat(incoming());
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        allow get, list: if isSignedIn() && (
+          chatId == request.auth.uid || 
+          isAdmin()
+        );
+        allow create: if isSignedIn() && isValidChatMessage(incoming()) && (
+          incoming().senderId == request.auth.uid || isAdmin()
+        );
+        allow update, delete: if false; // Messages are write-once/immutable
+      }
+    }
+
+    match /evaluations/{evaluationId} {
+      allow get: if true;
+      allow list: if resource.data.status == 'approved' || isAdmin();
+      
+      allow create: if isSignedIn() && isValidEvaluation(incoming()) && 
+                       incoming().status == 'pending'; // User submits as pending
+                       
+      allow update: if isAdmin() && isValidEvaluation(incoming());
+      allow delete: if isAdmin();
+    }
+  }
+}
